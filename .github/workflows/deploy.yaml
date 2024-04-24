@@ -1,0 +1,61 @@
+name: Deploy K8S-Project
+on:
+  push:
+    branches:
+      - master
+env:
+  SHA: $(git rev-parse HEAD)
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+ 
+      - name: Test
+        run: |-
+          docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+          docker build  -t nandinikodipunzula/k8s-project -f ./client/Dockerfile.dev ./client
+          docker run -e CI=true nandinikodipunzula/k8s-project npm test -- --coverage
+ 
+      - name: Set Service Key
+        uses: 'google-github-actions/auth@v0'
+        with:
+          credentials_json: '${{ secrets.GKE_SA_KEY }}'
+ 
+      - name: Set Project
+        uses: google-github-actions/setup-gcloud@v0
+        with:
+          project_id: k8s-project-421321
+ 
+      - name: Auth
+        run: |-
+          gcloud --quiet auth configure-docker
+ 
+      - name: Get Credentials
+        uses: google-github-actions/get-gke-credentials@v0
+        with:
+          cluster_name: k8s--cluster	
+          location: us-west1-b
+ 
+      - name: Build
+        run: |-
+          docker build -t nandinikodipunzula/k8s-project-client:latest -t nandinikodipunzula/k8s-project-client:${{ env.SHA }} -f ./client/Dockerfile ./client
+          docker build -t nandinikodipunzula/k8s-project-server:latest -t nandinikodipunzula/k8s-project-server:${{ env.SHA }} -f ./server/Dockerfile ./server
+          docker build -t nandinikodipunzula/k8s-project-worker:latest -t nandinikodipunzula/k8s-project-worker:${{ env.SHA }} -f ./worker/Dockerfile ./worker
+ 
+      - name: Push
+        run: |-
+          docker push nandinikodipunzula/k8s-project-client:latest
+          docker push nandinikodipunzula/k8s-project-server:latest
+          docker push nandinikodipunzula/k8s-project-worker:latest
+
+          docker push nandinikodipunzula/k8s-project-client:${{ env.SHA }}
+          docker push nandinikodipunzula/k8s-project-server:${{ env.SHA }}
+          docker push nandinikodipunzula/k8s-project-worker:${{ env.SHA }}
+ 
+      - name: Apply
+        run: |-
+          kubectl apply -f k8s
+          kubectl set image deployments/server-deployment server=nandinikodipunzula/k8s-project-server:${{ env.SHA }}
+          kubectl set image deployments/client-deployment client=nandinikodipunzula/k8s-project-client:${{ env.SHA }}
+          kubectl set image deployments/worker-deployment worker=nandinikodipunzula/k8s-project-worker:${{ env.SHA }}
