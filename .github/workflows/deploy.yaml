@@ -55,7 +55,6 @@ jobs:
  
       - name: Apply
         run: |-
-          kubectl create namespace kubernetes-dashboard
           kubectl apply -f k8s
           kubectl set image deployments/server-deployment server=nandinikodipunzula/k8s-project-server:${{ env.SHA }}
           kubectl set image deployments/client-deployment client=nandinikodipunzula/k8s-project-client:${{ env.SHA }}
