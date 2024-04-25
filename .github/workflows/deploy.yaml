@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
  
       - name: Test
         run: |-
@@ -18,12 +18,12 @@ jobs:
           docker run -e CI=true nandinikodipunzula/k8s-project npm test -- --coverage
  
       - name: Set Service Key
-        uses: 'google-github-actions/auth@v0'
+        uses: 'google-github-actions/auth@v2'
         with:
           credentials_json: '${{ secrets.GKE_SA_KEY }}'
  
       - name: Set Project
-        uses: google-github-actions/setup-gcloud@v0
+        uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: k8s-project-421321
  
